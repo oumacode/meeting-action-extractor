@@ -1,32 +1,22 @@
-from fastapi import FastAPI, UploadFile, File
-from groq import Groq
-from dotenv import load_dotenv
-import os
+from fastapi import FastAPI, UploadFile, File, Body
+from services.text_extraction_service import transcribe_audio_file
+from services.task_extraction_service import extract_tasks_from_text
 
-load_dotenv()
-
-app = FastAPI()
-
-client = Groq(
-    api_key=os.getenv("GROQ_API_KEY")
-)
+# Create FastAPI application
+app = FastAPI(title="Meeting Action Extractor")
 
 
 @app.get("/")
 def root():
     return {"message": "Hello World"}
 
-
+# Speech-to-text endpoint
 @app.post("/transcribe")
 async def transcribe_audio(file: UploadFile = File(...)):
+    return await transcribe_audio_file(file)
 
-    audio = await file.read()
 
-    transcription = client.audio.transcriptions.create(
-        file=(file.filename, audio),
-        model="whisper-large-v3-turbo"
-    )
-
-    return {
-        "text": transcription.text
-    }
+# Task extraction endpoint
+@app.post("/extract-tasks")
+async def extract_tasks(text: str = Body(..., embed=True)):
+    return await extract_tasks_from_text(text)
